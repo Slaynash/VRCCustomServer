@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A71C6ED4-9FEE-4501-8C73-62A98D27E21A}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>VRCCustomServer</RootNamespace>
+    <AssemblyName>VRCCustomServer</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\..\jeux\steam\SteamApps\common\VRChat\VRChat_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Photon3Unity3D">
+      <HintPath>..\..\..\..\jeux\steam\SteamApps\common\VRChat\VRChat_Data\Managed\Photon3Unity3D.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="UnityEngine, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Reference Include="UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null" />
+    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\jeux\steam\SteamApps\common\VRChat\VRChat_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="VRCCore-Standalone, Version=0.0.0.0, Culture=neutral, PublicKeyToken=67033c44591afb45, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\VRCMNWLoginInjectTest\bin\Release\VRCCore-Standalone.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Harmony\Attributes.cs" />
+    <Compile Include="Harmony\CodeInstruction.cs" />
+    <Compile Include="Harmony\CodeTranspiler.cs" />
+    <Compile Include="Harmony\Extras\DelegateTypeFactory.cs" />
+    <Compile Include="Harmony\Extras\FastAccess.cs" />
+    <Compile Include="Harmony\Extras\MethodInvoker.cs" />
+    <Compile Include="Harmony\GlobalSuppressions.cs" />
+    <Compile Include="Harmony\HarmonyInstance.cs" />
+    <Compile Include="Harmony\HarmonyMethod.cs" />
+    <Compile Include="Harmony\HarmonySharedState.cs" />
+    <Compile Include="Harmony\ILCopying\ByteBuffer.cs" />
+    <Compile Include="Harmony\ILCopying\Emitter.cs" />
+    <Compile Include="Harmony\ILCopying\ILInstruction.cs" />
+    <Compile Include="Harmony\ILCopying\Memory.cs" />
+    <Compile Include="Harmony\ILCopying\MethodCopier.cs" />
+    <Compile Include="Harmony\ILCopying\Signature.cs" />
+    <Compile Include="Harmony\MethodPatcher.cs" />
+    <Compile Include="Harmony\Patch.cs" />
+    <Compile Include="Harmony\PatchFunctions.cs" />
+    <Compile Include="Harmony\PatchProcessor.cs" />
+    <Compile Include="Harmony\Priority.cs" />
+    <Compile Include="Harmony\Tools\AccessCache.cs" />
+    <Compile Include="Harmony\Tools\AccessTools.cs" />
+    <Compile Include="Harmony\Tools\DynamicTools.cs" />
+    <Compile Include="Harmony\Tools\Extensions.cs" />
+    <Compile Include="Harmony\Tools\FileLog.cs" />
+    <Compile Include="Harmony\Tools\PatchTools.cs" />
+    <Compile Include="Harmony\Tools\SelfPatching.cs" />
+    <Compile Include="Harmony\Tools\SymbolExtensions.cs" />
+    <Compile Include="Harmony\Tools\Traverse.cs" />
+    <Compile Include="Harmony\Transpilers.cs" />
+    <Compile Include="ServerDef.cs" />
+    <Compile Include="VRCCustomServer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\dropdown" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VRLoader\VRLoader.csproj">
+      <Project>{68574166-711E-45B3-BB91-0DD7AD375DB4}</Project>
+      <Name>VRLoader</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
