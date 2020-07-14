@@ -1,5 +1,6 @@
 ﻿using ExitGames.Client.Photon;
 using Harmony;
+using MelonLoader;
 using Photon.Pun;
 using System;
 using System.Collections;
@@ -7,104 +8,102 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
-using VRC.Core;
 using VRC.UI;
-using VRLoader.Attributes;
-using VRLoader.Modules;
+using PhotonNetwork = ObjectPublicAbstractSealedStPhStObInSeSiObBoStUnique;
+
+[assembly: MelonModGame("VRChat", "VRChat")]
+[assembly: MelonModInfo(typeof(VRCCustomServer.VRCCustomServer), "VRCCustomServer", "0.2", "Slaynash")]
 
 namespace VRCCustomServer
 {
-    [ModuleInfo("VRCCustomServer", "0.1", "Slaynash")]
-    public class VRCCustomServer : VRModule
+    public class VRCCustomServer : MelonMod
     {
         private static ServerSettings ss;
         private static ServerDef defaultServer;
         private static Dropdown serverDropdown;
         private static List<ServerDef> serverList;
 
-        private static Type GetPhotonNetworkType => typeof(QuickMenu).Assembly.GetTypes().FirstOrDefault(t => t.GetFields(BindingFlags.Public | BindingFlags.Static).Any(m => m?.FieldType == typeof(ServerSettings)));
-
-        public void Awake()
+        public override void OnApplicationStart()
         {
             Log("Patching Photon*AppId");
             HarmonyInstance harmonyInstance = HarmonyInstance.Create("slaynash.VRCCustomServer");
-            harmonyInstance.Patch(typeof(VRCApplicationSetup).GetMethod("get_PhotonProdAppId", BindingFlags.Instance | BindingFlags.Public), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("PhotonProdAppIdPrefix", BindingFlags.NonPublic | BindingFlags.Static)));
-            harmonyInstance.Patch(typeof(VRCApplicationSetup).GetMethod("get_PhotonDevAppId", BindingFlags.Instance | BindingFlags.Public), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("PhotonDevAppIdPrefix", BindingFlags.NonPublic | BindingFlags.Static)));
+            harmonyInstance.Patch(typeof(VRCApplicationSetup).GetProperty("prop_String_0", BindingFlags.Instance | BindingFlags.Public).GetGetMethod(), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("PhotonProdAppIdPrefix", BindingFlags.NonPublic | BindingFlags.Static)));
+            harmonyInstance.Patch(typeof(VRCApplicationSetup).GetProperty("prop_String_1", BindingFlags.Instance | BindingFlags.Public).GetGetMethod(), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("PhotonDevAppIdPrefix", BindingFlags.NonPublic | BindingFlags.Static)));
             // Workaround for Unsequanced datas
             harmonyInstance.Patch(typeof(PeerBase).Assembly.GetType("ExitGames.Client.Photon.EnetPeer").GetMethod("CreateAndEnqueueCommand", (BindingFlags)(-1)), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("CreateAndEnqueueCommandPrefix", BindingFlags.NonPublic | BindingFlags.Static)));
-
-            harmonyInstance.Patch(typeof(ApiWorld).GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(m => m.Name == "GetNewInstance" && m.GetParameters().Length == 1), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("GetNewInstancePrefix", BindingFlags.NonPublic | BindingFlags.Static)));
-            harmonyInstance.Patch(typeof(VRCFlowManager).GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(m => m.Name == "EnterWorld" && m.GetParameters().Length == 5), null, new HarmonyMethod(typeof(VRCCustomServer).GetMethod("EnterWorldPostfix", BindingFlags.NonPublic | BindingFlags.Static)));
+            // TODO fix for il2cpp //harmonyInstance.Patch(typeof(ApiWorld).GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(m => m.Name == "GetNewInstance" && m.GetParameters().Length == 1), new HarmonyMethod(typeof(VRCCustomServer).GetMethod("GetNewInstancePrefix", BindingFlags.NonPublic | BindingFlags.Static)));
+            // TODO fix for il2cpp //harmonyInstance.Patch(typeof(VRCFlowManager).GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(m => m.Name == "EnterWorld" && m.GetParameters().Length == 5), null, new HarmonyMethod(typeof(VRCCustomServer).GetMethod("EnterWorldPostfix", BindingFlags.NonPublic | BindingFlags.Static)));
 
             Log("Patch done");
-            if (GetPhotonNetworkType != null)
+
+            MelonCoroutines.Start(InitAfterFrame());
+        }
+
+        private IEnumerator InitAfterFrame()
+        {
+            yield return null;
+            ss = PhotonNetwork.field_Public_Static_ServerSettings_0;
+            MelonModLogger.Log("ss: " + ss?.ToString() ?? "null");
+            MelonModLogger.Log("AppSettings: " + ss?.AppSettings?.ToString() ?? "null");
+
+            defaultServer = ServerDef.CloudServer("VRChat Cloud Server USW", ss.AppSettings.FixedRegion, ss.AppSettings.AppIdRealtime, ss.AppSettings.AppVersion);
+
+            foreach (string text in Environment.GetCommandLineArgs())
             {
-                Log("Found ServerSettings field");
-                ss = GetPhotonNetworkType.GetFields(BindingFlags.Public | BindingFlags.Static).First(m => m?.FieldType == typeof(ServerSettings)).GetValue(null) as ServerSettings;
-
-                defaultServer = ServerDef.CloudServer("VRChat Cloud Server USW", ss.AppSettings.FixedRegion, ss.AppSettings.AppIdRealtime, ss.AppSettings.AppVersion);
-
-                foreach (string text in Environment.GetCommandLineArgs())
+                if (text.StartsWith("--photonUseNS="))
                 {
-                    if (text.StartsWith("--photonUseNS="))
+                    string value = text.Substring("--photonUseNS=".Length);
+                    if (value == "false" || value == "0")
                     {
-                        string value = text.Substring("--photonUseNS=".Length);
-                        if (value == "false" || value == "0")
-                        {
-                            Log("setting UserNameServer to false. Old value was " + ss.AppSettings.UseNameServer);
-                            ss.AppSettings.UseNameServer = false;
-                        }
-                        else if (value == "true" || value == "1")
-                        {
-                            Log("setting UserNameServer to true. Old value was " + ss.AppSettings.UseNameServer);
-                            ss.AppSettings.UseNameServer = true;
-                        }
-                        else
-                            Log("--photonUseNS was passed with an invalid value");
+                        Log("setting UserNameServer to false. Old value was " + ss.AppSettings.UseNameServer);
+                        ss.AppSettings.UseNameServer = false;
                     }
-                    else if (text.StartsWith("--photonFixedRegion="))
+                    else if (value == "true" || value == "1")
                     {
-                        Log("setting FixedRegion to " + text.Substring("--photonFixedRegion=".Length) + ". Old value was " + ss.AppSettings.FixedRegion);
-                        ss.AppSettings.FixedRegion = text.Substring("--photonFixedRegion=".Length);
+                        Log("setting UserNameServer to true. Old value was " + ss.AppSettings.UseNameServer);
+                        ss.AppSettings.UseNameServer = true;
                     }
-                    else if (text.StartsWith("--photonServer="))
+                    else
+                        Log("--photonUseNS was passed with an invalid value");
+                }
+                else if (text.StartsWith("--photonFixedRegion="))
+                {
+                    Log("setting FixedRegion to " + text.Substring("--photonFixedRegion=".Length) + ". Old value was " + ss.AppSettings.FixedRegion);
+                    ss.AppSettings.FixedRegion = text.Substring("--photonFixedRegion=".Length);
+                }
+                else if (text.StartsWith("--photonServer="))
+                {
+                    Log("setting Server to " + text.Substring("--photonServer=".Length) + ". Old value was " + ss.AppSettings.Server);
+                    ss.AppSettings.Server = text.Substring("--photonServer=".Length);
+                }
+                else if (text.StartsWith("--photonPort="))
+                {
+                    if (int.TryParse(text.Substring("--photonPort=".Length), out int valueInt))
                     {
-                        Log("setting Server to " + text.Substring("--photonServer=".Length) + ". Old value was " + ss.AppSettings.Server);
-                        ss.AppSettings.Server = text.Substring("--photonServer=".Length);
+                        Log("setting Port to " + valueInt + ". Old value was " + ss.AppSettings.Port);
+                        ss.AppSettings.Port = valueInt;
+                        Log("Port set to " + ss.AppSettings.Port);
                     }
-                    else if (text.StartsWith("--photonPort="))
-                    {
-                        if (int.TryParse(text.Substring("--photonPort=".Length), out int valueInt))
-                        {
-                            Log("setting Port to " + valueInt + ". Old value was " + ss.AppSettings.Port);
-                            ss.AppSettings.Port = valueInt;
-                            Log("Port set to " + ss.AppSettings.Port);
-                        }
-                        else
-                            Log("--photonPort was passed with an invalid value");
-                    }
+                    else
+                        Log("--photonPort was passed with an invalid value");
                 }
             }
-            else
-            {
-                Console.WriteLine("[VRCCustomServer] ServerSettings field not found!");
-                return;
-            }
 
-            StartCoroutine(InitUI());
+            MelonModLogger.Log("Waiting for InitUI");
+
+            yield return InitUI();
+
+            MelonModLogger.Log("Done InitUI");
         }
 
         private IEnumerator InitUI()
         {
             PopupRoomInstance[] pris;
             while ((pris = Resources.FindObjectsOfTypeAll<PopupRoomInstance>()).Length == 0)
-            {
                 yield return null;
-            }
+
             PopupRoomInstance pri = pris[0];
 
             RectTransform nameTextRT = pri.transform.Find("Popup/NameText").GetComponent<RectTransform>();
@@ -120,9 +119,7 @@ namespace VRCCustomServer
             }
             if (request.assetBundle == null)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("[VRCCustomServer] Unable to load dropdown Assetbundle");
-                Console.ForegroundColor = ConsoleColor.White;
+                MelonModLogger.LogError("Unable to load dropdown Assetbundle");
                 yield break;
             }
 
@@ -132,18 +129,14 @@ namespace VRCCustomServer
                 yield return null;
             if (abrMain.asset == null)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("[VRCCustomServer] Unable to load Dropdown prefab from Assetbundle (prefab is null)");
-                Console.ForegroundColor = ConsoleColor.White;
+                MelonModLogger.LogError("Unable to load Dropdown prefab from Assetbundle (prefab is null)");
                 yield break;
             }
-            Dropdown prefab = ((GameObject)abrMain.asset).GetComponent<Dropdown>();
+            Dropdown prefab = abrMain.asset.Cast<GameObject>().GetComponent<Dropdown>();
 
             if (prefab == null)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Invalid Dropdown prefab: Missing Dropdown script");
-                Console.ForegroundColor = ConsoleColor.White;
+                MelonModLogger.LogError("Invalid Dropdown prefab: Missing Dropdown script");
                 yield break;
             }
 
@@ -154,11 +147,14 @@ namespace VRCCustomServer
             ddRT.localPosition += new Vector3(250, 150);
             ddRT.sizeDelta += new Vector2(200, 0);
 
-            defaultServer.appVersion = FindObjectOfType<VRCApplicationSetup>().GetGameServerVersion();
+            defaultServer.appVersion = GameObject.FindObjectOfType<VRCApplicationSetup>().Method_Public_String_2();
 
             serverList = new List<ServerDef> { defaultServer, ServerDef.DedicatedServer("Slaynash EUW Server", "31.204.91.102", 5055)/*, ServerDef.DedicatedServer("Local Server", "127.0.0.1", 5055)*/ };
             serverDropdown.ClearOptions();
-            serverDropdown.AddOptions(serverList.ConvertAll(s => s.name));
+            Il2CppSystem.Collections.Generic.List<string> options = new Il2CppSystem.Collections.Generic.List<string>(serverList.Count);
+            foreach (ServerDef serverdef in serverList)
+                options.Add(serverdef.name);
+            serverDropdown.AddOptions(options);
         }
 
         private static bool PhotonProdAppIdPrefix(ref string __result)
@@ -229,7 +225,7 @@ namespace VRCCustomServer
                     ss.AppSettings.Server = addressParts[0];
                     ss.AppSettings.Port = int.Parse(addressParts[1]);
 
-                    Resources.FindObjectsOfTypeAll<VRCFlowNetworkManager>()[0].Disconnect();
+                    Resources.FindObjectsOfTypeAll<VRCFlowNetworkManager>()[0].Method_Public_Void_0();
                 }
             }
             else if (__1.Contains("~cloud("))
@@ -250,7 +246,7 @@ namespace VRCCustomServer
                     ss.AppSettings.AppIdRealtime = addressParts[1];
                     ss.AppSettings.AppVersion = addressParts[2];
 
-                    Resources.FindObjectsOfTypeAll<VRCFlowNetworkManager>()[0].Disconnect();
+                    Resources.FindObjectsOfTypeAll<VRCFlowNetworkManager>()[0].Method_Public_Void_0();
                 }
             }
             else
@@ -266,21 +262,18 @@ namespace VRCCustomServer
                     ss.AppSettings.AppIdRealtime = defaultServer.appId;
                     ss.AppSettings.AppVersion = defaultServer.appVersion;
 
-                    object loadbalancingclient = GetPhotonNetworkType.GetFields(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(f => f.FieldType.GetInterfaces().Any(i => i == typeof(IPhotonPeerListener)))?.GetValue(null);
-                    object loadbalancingpeer = loadbalancingclient.GetType().BaseType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault(f => f.FieldType.IsSubclassOf(typeof(PhotonPeer)))?.GetValue(loadbalancingclient);
-                    typeof(PhotonPeer).GetMethod("set_SerializationProtocolType", BindingFlags.Public | BindingFlags.Instance).Invoke(loadbalancingpeer, new object[] { SerializationProtocol.GpBinaryV18 });
+                    ObjectPublicIPhotonPeerListenerObStBoStObCoDiBo2ObUnique loadbalancingclient = PhotonNetwork.field_Public_Static_ObjectPublicIPhotonPeerListenerObStBoStObCoDiBo2ObUnique_0;
+                    PhotonPeerPublicTyDi2ByObUnique loadbalancingpeer = loadbalancingclient.prop_PhotonPeerPublicTyDi2ByObUnique_0;
+                    loadbalancingpeer.SerializationProtocolType = SerializationProtocol.GpBinaryV18;
 
-                    Resources.FindObjectsOfTypeAll<VRCFlowNetworkManager>()[0].Disconnect();
+                    Resources.FindObjectsOfTypeAll<VRCFlowNetworkManager>()[0].Method_Public_Void_0();
                 }
             }
         }
 
         private static void Log(string s)
         {
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.WriteLine("[VRCCustomServer] " + s);
-            UnityEngine.Debug.Log("[<color=blue>VRCCustomServer</color>] " + s);
-            Console.ForegroundColor = ConsoleColor.White;
+            MelonModLogger.Log(ConsoleColor.Blue, s);
         }
     }
 }
